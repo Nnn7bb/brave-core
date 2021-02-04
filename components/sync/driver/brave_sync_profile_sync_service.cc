@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "base/logging.h"
+#include "base/metrics/histogram_macros.h"
 #include "base/strings/string_util.h"
 #include "brave/components/brave_sync/crypto/crypto.h"
 #include "brave/components/sync/driver/brave_sync_auth_manager.h"
@@ -120,7 +121,7 @@ void BraveProfileSyncService::OnSyncCycleCompleted(
 }
 
 void BraveProfileSyncService::ReenableSyncTypes() {
-  // TODO(alexeybarabash): P3A
+  UMA_HISTOGRAM_EXACT_LINEAR("Brave.Sync.TypesEverReenabled", 1, 1);
   SyncUserSettings* sync_user_settings = GetUserSettings();
   const UserSelectableTypeSet selected_types =
       sync_user_settings->GetSelectedTypes();
