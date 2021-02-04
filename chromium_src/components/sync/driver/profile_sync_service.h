@@ -6,8 +6,11 @@
 #ifndef BRAVE_CHROMIUM_SRC_COMPONENTS_SYNC_DRIVER_PROFILE_SYNC_SERVICE_H_
 #define BRAVE_CHROMIUM_SRC_COMPONENTS_SYNC_DRIVER_PROFILE_SYNC_SERVICE_H_
 
-#define BRAVE_PROFILE_SYNC_SERVICE_H_ \
- private:                             \
+FORWARD_DECLARE_TEST(BraveProfileSyncServiceTest, ReenableTypes);
+
+#define BRAVE_PROFILE_SYNC_SERVICE_H_                                   \
+ private:                                                               \
+  FRIEND_TEST_ALL_PREFIXES(BraveProfileSyncServiceTest, ReenableTypes); \
   friend class BraveProfileSyncService;
 
 #include "../../../../../components/sync/driver/profile_sync_service.h"

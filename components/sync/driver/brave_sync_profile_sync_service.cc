@@ -147,4 +147,9 @@ bool BraveProfileSyncService::IsReenableTypesRequired(
   return failed_commit_times_ >= kNumberOfFailedCommitsToReenable;
 }
 
+/*static*/
+size_t BraveProfileSyncService::GetNumberOfFailedCommitsToReenableForTests() {
+  return kNumberOfFailedCommitsToReenable;
+}
+
 }  // namespace syncer
