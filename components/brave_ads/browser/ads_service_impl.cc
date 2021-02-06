@@ -82,6 +82,7 @@
 #include "services/network/public/cpp/simple_url_loader.h"
 #include "third_party/dom_distiller_js/dom_distiller.pb.h"
 #include "ui/base/l10n/l10n_util.h"
+#include "ui/base/page_transition_types.h"
 #include "ui/base/resource/resource_bundle.h"
 #include "ui/message_center/public/cpp/notification.h"
 
@@ -308,6 +309,8 @@ void AdsServiceImpl::ChangeLocale(const std::string& locale) {
 }
 
 void AdsServiceImpl::OnPageLoaded(const SessionID& tab_id,
+                                  const int32_t page_transition,
+                                  const bool has_user_gesture,
                                   const std::vector<GURL>& redirect_chain,
                                   const std::string& content) {
   if (!connected()) {
@@ -319,7 +322,8 @@ void AdsServiceImpl::OnPageLoaded(const SessionID& tab_id,
     redirect_chain_as_strings.push_back(url.spec());
   }
 
-  bat_ads_->OnPageLoaded(tab_id.id(), redirect_chain_as_strings, content);
+  bat_ads_->OnPageLoaded(tab_id.id(), page_transition, has_user_gesture,
+                         redirect_chain_as_strings, content);
 }
 
 void AdsServiceImpl::OnMediaStart(const SessionID& tab_id) {

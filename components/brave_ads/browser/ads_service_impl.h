@@ -99,6 +99,8 @@ class AdsServiceImpl : public AdsService,
   void ChangeLocale(const std::string& locale) override;
 
   void OnPageLoaded(const SessionID& tab_id,
+                    const int32_t page_transition,
+                    const bool has_user_gesture,
                     const std::vector<GURL>& redirect_chain,
                     const std::string& content) override;
 

@@ -8,6 +8,7 @@
 #include <memory>
 #include <utility>
 
+#include "base/logging.h"
 #include "brave/components/brave_ads/browser/ads_service.h"
 #include "brave/components/brave_ads/browser/ads_service_factory.h"
 #include "chrome/browser/profiles/profile.h"
@@ -17,6 +18,7 @@
 #include "content/public/browser/navigation_handle.h"
 #include "content/public/browser/render_frame_host.h"
 #include "content/public/browser/web_contents.h"
+#include "ui/base/page_transition_types.h"
 #include "ui/base/resource/resource_bundle.h"
 
 #if !defined(OS_ANDROID)
@@ -27,13 +29,134 @@
 
 namespace brave_ads {
 
+namespace {
+
+void DebugLog(content::NavigationHandle* navigation_handle) {
+  VLOG(0) << "FOOBAR.has_user_gesture: " << navigation_handle->HasUserGesture();
+
+  VLOG(0) << "FOOBAR.was_initiated_by_link_click: "
+          << navigation_handle->WasInitiatedByLinkClick();
+
+  VLOG(0) << "FOOBAR.is_download: " << navigation_handle->IsDownload();
+
+  const ui::PageTransition page_transition =
+      navigation_handle->GetPageTransition();
+
+  std::string page_transition_as_string;
+  switch (ui::PageTransitionStripQualifier(page_transition)) {
+    case ui::PAGE_TRANSITION_LINK: {
+      page_transition_as_string = "Link";
+      break;
+    }
+
+    case ui::PAGE_TRANSITION_TYPED: {
+      page_transition_as_string = "Typed";
+      break;
+    }
+
+    case ui::PAGE_TRANSITION_AUTO_BOOKMARK: {
+      page_transition_as_string = "Auto Bookmark";
+      break;
+    }
+
+    case ui::PAGE_TRANSITION_AUTO_SUBFRAME: {
+      page_transition_as_string = "Auto Subframe";
+      break;
+    }
+
+    case ui::PAGE_TRANSITION_MANUAL_SUBFRAME: {
+      page_transition_as_string = "Manual Subframe";
+      break;
+    }
+
+    case ui::PAGE_TRANSITION_GENERATED: {
+      page_transition_as_string = "Generated";
+      break;
+    }
+
+    case ui::PAGE_TRANSITION_AUTO_TOPLEVEL: {
+      page_transition_as_string = "Auto Top Level";
+      break;
+    }
+
+    case ui::PAGE_TRANSITION_FORM_SUBMIT: {
+      page_transition_as_string = "Form Submit";
+      break;
+    }
+
+    case ui::PAGE_TRANSITION_RELOAD: {
+      page_transition_as_string = "Reload";
+      break;
+    }
+
+    case ui::PAGE_TRANSITION_KEYWORD: {
+      page_transition_as_string = "Keyword";
+      break;
+    }
+
+    case ui::PAGE_TRANSITION_KEYWORD_GENERATED: {
+      page_transition_as_string = "Keyword Generated";
+      break;
+    }
+
+    case ui::PAGE_TRANSITION_FORWARD_BACK: {
+      page_transition_as_string = "Forward/Back";
+      break;
+    }
+
+    case ui::PAGE_TRANSITION_FROM_ADDRESS_BAR: {
+      page_transition_as_string = "From Address Bar";
+      break;
+    }
+
+    case ui::PAGE_TRANSITION_HOME_PAGE: {
+      page_transition_as_string = "Home Page";
+      break;
+    }
+
+    case ui::PAGE_TRANSITION_FROM_API: {
+      page_transition_as_string = "From API";
+      break;
+    }
+
+    case ui::PAGE_TRANSITION_CHAIN_START: {
+      page_transition_as_string = "Chain Start";
+      break;
+    }
+
+    case ui::PAGE_TRANSITION_CHAIN_END: {
+      page_transition_as_string = "Chain End";
+      break;
+    }
+
+    case ui::PAGE_TRANSITION_CLIENT_REDIRECT: {
+      page_transition_as_string = "Client Redirect";
+      break;
+    }
+
+    case ui::PAGE_TRANSITION_SERVER_REDIRECT: {
+      page_transition_as_string = "Server Redirect";
+      break;
+    }
+
+    default: {
+      page_transition_as_string = "Other";
+      break;
+    }
+  }
+
+  VLOG(0) << "FOOBAR.transition: " << page_transition_as_string;
+}
+
+}  // namespace
+
 AdsTabHelper::AdsTabHelper(content::WebContents* web_contents)
     : WebContentsObserver(web_contents),
       tab_id_(sessions::SessionTabHelper::IdForTab(web_contents)),
       ads_service_(nullptr),
       is_active_(false),
       is_browser_active_(true),
-      run_distiller_(false),
+      should_process_(false),
       weak_factory_(this) {
   if (!tab_id_.is_valid()) {
     return;
@@ -84,47 +207,57 @@ void AdsTabHelper::RunIsolatedJavaScript(
 }
 
 void AdsTabHelper::OnJavaScriptResult(base::Value value) {
-  DCHECK(ads_service_ && ads_service_->IsEnabled());
+  if (!IsAdsEnabled()) {
+    return;
+  }
 
   DCHECK(value.is_string());
   std::string content;
   value.GetAsString(&content);
 
-  ads_service_->OnPageLoaded(tab_id_, redirect_chain_, content);
+  VLOG(0) << "FOOBAR.redirect_chain:";
+  for (const auto& redirect : redirect_chain_) {
+    VLOG(0) << "  " << redirect.spec();
+  }
+
+  ads_service_->OnPageLoaded(tab_id_, page_transition_, has_user_gesture_,
+                             redirect_chain_, content);
 }
 
 void AdsTabHelper::DidFinishNavigation(
     content::NavigationHandle* navigation_handle) {
-  if (!navigation_handle->IsInMainFrame() ||
+  DCHECK(navigation_handle);
+
+  if (!IsAdsEnabled() || !navigation_handle->IsInMainFrame() ||
       !navigation_handle->HasCommitted() || !tab_id_.is_valid()) {
     return;
   }
 
   redirect_chain_ = navigation_handle->GetRedirectChain();
 
-  if (navigation_handle->IsSameDocument()) {
-    if (!IsAdsEnabled()) {
-      // Do not call the ads service if the ad service isn't enabled
-      return;
-    }
+  const ui::PageTransition page_transition =
+      navigation_handle->GetPageTransition();
 
-    content::RenderFrameHost* render_frame_host =
-        navigation_handle->GetRenderFrameHost();
+  DebugLog(navigation_handle);
 
-    RunIsolatedJavaScript(render_frame_host);
+  page_transition_ = static_cast<int32_t>(page_transition);
 
+  has_user_gesture_ = navigation_handle->HasUserGesture();
+
+  if (!navigation_handle->IsSameDocument()) {
+    should_process_ = navigation_handle->GetRestoreType() ==
+                      content::RestoreType::kNotRestored;
     return;
   }
 
-  bool was_restored =
-      navigation_handle->GetRestoreType() == content::RestoreType::kRestored;
+  content::RenderFrameHost* render_frame_host =
+      navigation_handle->GetRenderFrameHost();
 
-  run_distiller_ = !was_restored;
+  RunIsolatedJavaScript(render_frame_host);
 }
 
 void AdsTabHelper::DocumentOnLoadCompletedInMainFrame() {
-  if (!IsAdsEnabled() || !run_distiller_) {
-    // Do not start distilling if the ad service isn't enabled
+  if (!IsAdsEnabled() || !should_process_) {
     return;
   }
 
@@ -140,6 +273,8 @@ void AdsTabHelper::DocumentOnLoadCompletedInMainFrame() {
 
 void AdsTabHelper::DidFinishLoad(content::RenderFrameHost* render_frame_host,
                                  const GURL& validated_url) {
+  DCHECK(render_frame_host);
+
   if (render_frame_host->GetParent()) {
     return;
   }
@@ -168,16 +303,22 @@ void AdsTabHelper::MediaStoppedPlaying(
 }
 
 void AdsTabHelper::OnVisibilityChanged(content::Visibility visibility) {
-  bool old_active = is_active_;
-  if (visibility == content::Visibility::HIDDEN) {
-    is_active_ = false;
-  } else if (visibility == content::Visibility::OCCLUDED) {
-    is_active_ = false;
-  } else if (visibility == content::Visibility::VISIBLE) {
-    is_active_ = true;
+  const bool old_is_active = is_active_;
+
+  switch (visibility) {
+    case content::Visibility::HIDDEN:
+    case content::Visibility::OCCLUDED: {
+      is_active_ = false;
+      break;
+    }
+
+    case content::Visibility::VISIBLE: {
+      is_active_ = true;
+      break;
+    }
   }
 
-  if (old_active == is_active_) {
+  if (old_is_active == is_active_) {
     return;
   }
 
@@ -200,13 +341,14 @@ void AdsTabHelper::OnBrowserSetLastActive(Browser* browser) {
     return;
   }
 
-  bool old_active = is_browser_active_;
+  const bool old_is_browser_active = is_browser_active_;
+
   if (browser->tab_strip_model()->GetIndexOfWebContents(web_contents()) !=
       TabStripModel::kNoTab) {
     is_browser_active_ = true;
   }
 
-  if (old_active == is_browser_active_) {
+  if (old_is_browser_active == is_browser_active_) {
     return;
   }
 
@@ -214,13 +356,16 @@ void AdsTabHelper::OnBrowserSetLastActive(Browser* browser) {
 }
 
 void AdsTabHelper::OnBrowserNoLongerActive(Browser* browser) {
-  bool old_active = is_browser_active_;
+  DCHECK(browser);
+
+  const bool old_is_browser_active = is_browser_active_;
+
   if (browser->tab_strip_model()->GetIndexOfWebContents(web_contents()) !=
       TabStripModel::kNoTab) {
     is_browser_active_ = false;
   }
 
-  if (old_active == is_browser_active_) {
+  if (old_is_browser_active == is_browser_active_) {
     return;
   }
 

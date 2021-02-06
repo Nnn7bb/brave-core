@@ -48,10 +48,11 @@ class BatAdsImpl :
 
   void OnAdsSubdivisionTargetingCodeHasChanged() override;
 
-  void OnPageLoaded(
-      const int32_t tab_id,
-      const std::vector<std::string>& redirect_chain,
-      const std::string& content) override;
+  void OnPageLoaded(const int32_t tab_id,
+                    const int32_t page_transition,
+                    const bool has_user_gesture,
+                    const std::vector<std::string>& redirect_chain,
+                    const std::string& content) override;
 
   void OnUnIdle() override;
   void OnIdle() override;

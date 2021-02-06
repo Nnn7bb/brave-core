@@ -6,6 +6,8 @@
 #ifndef BRAVE_COMPONENTS_BRAVE_ADS_BROWSER_ADS_SERVICE_H_
 #define BRAVE_COMPONENTS_BRAVE_ADS_BROWSER_ADS_SERVICE_H_
 
+#include <stdint.h>
+
 #include <map>
 #include <string>
 #include <vector>
@@ -90,6 +92,8 @@ class AdsService : public KeyedService {
   virtual void ChangeLocale(const std::string& locale) = 0;
 
   virtual void OnPageLoaded(const SessionID& tab_id,
+                            const int32_t page_transition,
+                            const bool has_user_gesture,
                             const std::vector<GURL>& redirect_chain,
                             const std::string& content) = 0;
 

@@ -9,9 +9,7 @@ if (is_android) {
 dep_base = rebase_path("../..", "//")
 
 config("external_config") {
-  visibility = [
-    ":*",
-  ]
+  visibility = [ ":*" ]
   include_dirs = [
     "include",
     "$target_gen_dir/include",
@@ -29,13 +27,9 @@ config("internal_config") {
 }
 
 group("bat-native-ads") {
-  public_deps = [
-    ":ads",
-  ]
+  public_deps = [ ":ads" ]
 
-  data_deps = [
-    ":bat-native-ads-standalone",
-  ]
+  data_deps = [ ":bat-native-ads-standalone" ]
 }
 
 static_library("bat-native-ads-standalone") {
@@ -46,20 +40,16 @@ static_library("bat-native-ads-standalone") {
 
   configs -= [ "//build/config/compiler:thin_archive" ]
 
-  defines = [
-    "STANDALONE_BUILD",
-  ]
+  defines = [ "STANDALONE_BUILD" ]
 
-  deps = [
-    ":ads"
-  ]
+  deps = [ ":ads" ]
 }
 
 source_set("headers") {
   visibility = [
     ":*",
-    "//brave/components/brave_ads/test:*",
     "//brave/browser/extensions:extensions",
+    "//brave/components/brave_ads/test:*",
     "//brave/test:*",
   ]
 
@@ -71,9 +61,9 @@ source_set("headers") {
     "include/bat/ads/ad_info.h",
     "include/bat/ads/ad_notification_info.h",
     "include/bat/ads/ad_type.h",
+    "include/bat/ads/ads.h",
     "include/bat/ads/ads_client.h",
     "include/bat/ads/ads_history_info.h",
-    "include/bat/ads/ads.h",
     "include/bat/ads/category_content_info.h",
     "include/bat/ads/confirmation_type.h",
     "include/bat/ads/database.h",
@@ -554,8 +544,17 @@ source_set("ads") {
     "src/bat/ads/internal/tokens/refill_unblinded_tokens/request_signed_tokens_url_request_builder.h",
     "src/bat/ads/internal/url_util.cc",
     "src/bat/ads/internal/url_util.h",
+    "src/bat/ads/internal/user_activity/page_transition_util.cc",
+    "src/bat/ads/internal/user_activity/page_transition_util.h",
     "src/bat/ads/internal/user_activity/user_activity.cc",
     "src/bat/ads/internal/user_activity/user_activity.h",
+    "src/bat/ads/internal/user_activity/user_activity_event_info.cc",
+    "src/bat/ads/internal/user_activity/user_activity_event_info.h",
+    "src/bat/ads/internal/user_activity/user_activity_event_types.h",
+    "src/bat/ads/internal/user_activity/user_activity_scoring.cc",
+    "src/bat/ads/internal/user_activity/user_activity_scoring.h",
+    "src/bat/ads/internal/user_activity/user_activity_trigger_info.cc",
+    "src/bat/ads/internal/user_activity/user_activity_trigger_info.h",
     "src/bat/ads/new_tab_page_ad_info.cc",
     "src/bat/ads/pref_names.cc",
     "src/bat/ads/promoted_content_ad_info.cc",
@@ -579,15 +578,15 @@ source_set("ads") {
 
   if (is_mac) {
     sources += [
-      "src/bat/ads/internal/platform/platform_helper_mac.mm",
       "src/bat/ads/internal/platform/platform_helper_mac.h",
+      "src/bat/ads/internal/platform/platform_helper_mac.mm",
     ]
   }
 
   if (is_ios) {
     sources += [
-      "src/bat/ads/internal/platform/platform_helper_ios.mm",
       "src/bat/ads/internal/platform/platform_helper_ios.h",
+      "src/bat/ads/internal/platform/platform_helper_ios.mm",
     ]
   }
 
@@ -610,6 +609,7 @@ source_set("ads") {
     "//third_party/boringssl",
     "//third_party/re2",
     "//third_party/sqlite",
+    "//ui/base",
     "//url",
     rebase_path("bat-native-rapidjson", dep_base),
     rebase_path("bat-native-tweetnacl:tweetnacl", dep_base),
@@ -617,7 +617,5 @@ source_set("ads") {
     rebase_path("brave_base", dep_base),
   ]
 
-  public_deps = [
-    ":headers",
-  ]
+  public_deps = [ ":headers" ]
 }

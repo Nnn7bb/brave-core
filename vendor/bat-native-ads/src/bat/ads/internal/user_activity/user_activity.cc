@@ -6,6 +6,7 @@
 #include "bat/ads/internal/user_activity/user_activity.h"
 
 #include "base/time/time.h"
+#include "bat/ads/internal/user_activity/page_transition_util.h"
 
 namespace ads {
 
@@ -49,6 +50,34 @@ void UserActivity::RecordEvent(const UserActivityEventType event_type) {
   if (history_.at(event_type).size() >
       kMaximumUserActivityEventHistoryEntries) {
     history_.at(event_type).pop_back();
+  }
+}
+
+void UserActivity::RecordEventFromPageTransition(const int8_t page_transition) {
+  if (IsNewNavigation(page_transition)) {
+    RecordEvent(UserActivityEventType::kNewNavigation);
+  }
+
+  if (DidUseBackOrFowardButtonToTriggerNavigation(page_transition)) {
+    RecordEvent(UserActivityEventType::kClickedBackOrForwardNavigationButtons);
+  }
+
+  if (DidUseAddressBarToTriggerNavigation(page_transition)) {
+    RecordEvent(UserActivityEventType::kUsedAddressBar);
+  }
+
+  if (DidNavigateToHomePage(page_transition)) {
+    RecordEvent(UserActivityEventType::kClickedHomePageButton);
+  }
+
+  if (DidTransitionFromExternalApplication(page_transition)) {
+    RecordEvent(UserActivityEventType::kOpenedLinkFromExternalApplication);
+  }
+
+  const base::Optional<UserActivityEventType> event_type =
+      ToUserActivityEventType(page_transition);
+  if (event_type) {
+    RecordEvent(event_type.value());
   }
 }
 

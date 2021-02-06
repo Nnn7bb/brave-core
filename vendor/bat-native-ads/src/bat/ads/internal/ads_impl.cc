@@ -7,6 +7,7 @@
 
 #include <utility>
 
+#include "base/strings/stringprintf.h"
 #include "base/time/time.h"
 #include "bat/ads/ad_history_info.h"
 #include "bat/ads/ad_info.h"
@@ -49,7 +50,9 @@
 #include "bat/ads/internal/tab_manager/tab_info.h"
 #include "bat/ads/internal/tab_manager/tab_manager.h"
 #include "bat/ads/internal/url_util.h"
+#include "bat/ads/internal/user_activity/page_transition_util.h"
 #include "bat/ads/internal/user_activity/user_activity.h"
+#include "bat/ads/internal/user_activity/user_activity_scoring.h"
 #include "bat/ads/new_tab_page_ad_info.h"
 #include "bat/ads/pref_names.h"
 #include "bat/ads/promoted_content_ad_info.h"
@@ -133,6 +136,8 @@ void AdsImpl::OnAdsSubdivisionTargetingCodeHasChanged() {
 }
 
 void AdsImpl::OnPageLoaded(const int32_t tab_id,
+                           const int32_t page_transition,
+                           const bool has_user_gesture,
                            const std::vector<std::string>& redirect_chain,
                            const std::string& content) {
   DCHECK(!redirect_chain.empty());
@@ -141,7 +146,43 @@ void AdsImpl::OnPageLoaded(const int32_t tab_id,
     return;
   }
 
-  const std::string original_url = redirect_chain.front();
+  UserActivityTriggers triggers;
+  UserActivityTriggerInfo trigger;
+  trigger.event_sequence = "01";
+  trigger.score = 0.5;
+  triggers.push_back(trigger);
+  trigger.event_sequence = "010203";
+  trigger.score = 1.0;
+  triggers.push_back(trigger);
+  trigger.event_sequence = "0203";
+  trigger.score = 0.3;
+  triggers.push_back(trigger);
+
+  UserActivityEvents events;
+  UserActivityEventInfo event;
+  event.type = UserActivityEventType::kClickedLink;  // 5
+  events.push_back(event);
+  event.type = UserActivityEventType::kPlayedMedia;  // 2
+  events.push_back(event);
+  event.type = UserActivityEventType::kBrowserWindowDidBecomeActive;  // 3
+  events.push_back(event);
+  event.type = UserActivityEventType::kClosedTab;  // 1
+  events.push_back(event);
+  event.type = UserActivityEventType::kPlayedMedia;  // 2
+  events.push_back(event);
+  event.type = UserActivityEventType::kBrowserWindowDidBecomeActive;  // 3
+  events.push_back(event);
+  event.type = UserActivityEventType::kClosedTab;  // 1
+  events.push_back(event);
+  event.type = UserActivityEventType::kClickedBookmark;  // 7
+  events.push_back(event);
+
+  BLOG(0, "FOOBAR.score: " << GetUserActivityScore(triggers, events));
+
+  if (has_user_gesture) {
+    user_activity_->RecordEventFromPageTransition(page_transition);
+  }
+
   const std::string url = redirect_chain.back();
 
   if (!DoesUrlHaveSchemeHTTPOrHTTPS(url)) {
@@ -149,19 +190,14 @@ void AdsImpl::OnPageLoaded(const int32_t tab_id,
     return;
   }
 
+  const std::string original_url = redirect_chain.front();
   ad_transfer_->MaybeTransferAd(tab_id, original_url);
 
   conversions_->MaybeConvert(redirect_chain);
 
   const base::Optional<TabInfo> last_visible_tab =
       TabManager::Get()->GetLastVisible();
-
-  std::string last_visible_tab_url;
-  if (last_visible_tab) {
-    last_visible_tab_url = last_visible_tab->url;
-  }
-
-  if (!SameDomainOrHost(url, last_visible_tab_url)) {
+  if (!SameDomainOrHost(url, last_visible_tab ? last_visible_tab->url : "")) {
     purchase_intent_processor_->Process(GURL(url));
   }
 

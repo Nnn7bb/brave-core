@@ -11,15 +11,9 @@
 #include <deque>
 #include <map>
 
-namespace ads {
+#include "bat/ads/internal/user_activity/user_activity_event_types.h"
 
-enum class UserActivityEventType {
-  kOpenedNewOrFocusedOnExistingTab,
-  kClosedTab,
-  kPlayedMedia,
-  kBrowserWindowDidBecomeActive,
-  kBrowserWindowDidEnterBackground
-};
+namespace ads {
 
 using UserActivityEventHistory = std::deque<int64_t>;
 using UserActivityEventHistoryMap =
@@ -39,6 +33,7 @@ class UserActivity {
   static bool HasInstance();
 
   void RecordEvent(const UserActivityEventType event);
+  void RecordEventFromPageTransition(const int8_t page_transition);
 
   const UserActivityEventHistoryMap& get_history() const;
 

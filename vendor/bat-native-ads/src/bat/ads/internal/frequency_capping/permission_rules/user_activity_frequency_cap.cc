@@ -18,15 +18,21 @@ namespace {
 
 double GetPointsForEventType(const UserActivityEventType event_type) {
   switch (event_type) {
-    case UserActivityEventType::kOpenedNewOrFocusedOnExistingTab:
+    case UserActivityEventType::kOpenedNewTab:
+    case UserActivityEventType::kFocusedOnExistingTab:
     case UserActivityEventType::kClosedTab:
-    case UserActivityEventType::kPlayedMedia: {
+    case UserActivityEventType::kPlayedMedia:
+    case UserActivityEventType::kStoppedPlayingMedia: {
       return 1.0;
     }
 
     case UserActivityEventType::kBrowserWindowDidBecomeActive:
     case UserActivityEventType::kBrowserWindowDidEnterBackground: {
       return 0.5;
+    }
+
+    default: {
+      return 0.0;
     }
   }
 }
